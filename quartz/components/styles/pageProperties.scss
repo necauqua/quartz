@@ -1,0 +1,42 @@
+.page-props {
+  display: grid;
+  grid-gap: 4px 16px;
+  grid-template-columns: max-content;
+  color: var(--darkgray);
+
+  > dt {
+    font-weight: bold;
+    font-family: mono;
+    font-size: 0.8em;
+    align-self: center;
+  }
+
+  > dd {
+    margin: 0;
+    grid-column-start: 2;
+  }
+
+  .internal {
+    padding: 0 0.25rem;
+  }
+
+  .property-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem;
+
+    > li {
+      line-height: initial;
+      display: flex;
+    }
+
+    > li:not(:last-child) {
+      &::after {
+        content: ",";
+      }
+    }
+  }
+}

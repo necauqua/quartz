@@ -57,6 +57,8 @@ export const FrontMatter: QuartzTransformerPlugin<Partial<Options>> = (userOpts)
               },
             })
 
+            ;(file.data as any).frontmatterRaw = structuredClone(data)
+
             if (data.title != null && data.title.toString() !== "") {
               data.title = data.title.toString()
             } else {
@@ -115,5 +117,6 @@ declare module "vfile" {
         socialImage: string
         comments: boolean | string
       }>
+    readonly frontmatterRaw: { readonly [key: string]: Readonly<any> }
   }
 }
