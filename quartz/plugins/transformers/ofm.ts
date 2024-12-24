@@ -31,7 +31,7 @@ export interface Options {
   wikilinks: boolean
   callouts: boolean
   mermaid: boolean
-  parseTags: boolean
+  parseTags: boolean | "link-only"
   parseArrows: boolean
   parseBlockReferences: boolean
   enableInHtmlEmbed: boolean
@@ -338,9 +338,13 @@ export const ObsidianFlavoredMarkdown: QuartzTransformerPlugin<Partial<Options>>
                 }
 
                 tag = slugTag(tag)
-                if (file.data.frontmatter) {
+                if (opts.parseTags != "link-only" && file.data.frontmatter) {
                   const noteTags = file.data.frontmatter.tags ?? []
                   file.data.frontmatter.tags = [...new Set([...noteTags, tag])]
+                } else {
+                  // We store the content tags so that the tagPage can be generated even
+                  // if there's no pages tagged with them through the frontmatter
+                  file.data.tagLinks = (file.data.tagLinks ?? new Set()).add(tag)
                 }
 
                 return {
@@ -828,5 +832,6 @@ declare module "vfile" {
     blocks: Record<string, Element>
     htmlAst: HtmlRoot
     hasMermaidDiagram: boolean | undefined
+    tagLinks: Set<string>
   }
 }

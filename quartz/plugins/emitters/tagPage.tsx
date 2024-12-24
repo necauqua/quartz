@@ -17,10 +17,16 @@ import { TagContent } from "../../components"
 import { write } from "./helpers"
 import { i18n } from "../../i18n"
 import DepGraph from "../../depgraph"
+import { Data } from "vfile"
 
 interface TagPageOptions extends FullPageLayout {
   sort?: (f1: QuartzPluginData, f2: QuartzPluginData) => number
 }
+
+const getTags = ({ frontmatter, tagLinks }: Data) => [
+  ...(frontmatter?.tags ?? []),
+  ...(tagLinks ?? []),
+]
 
 export const TagPage: QuartzEmitterPlugin<Partial<TagPageOptions>> = (userOpts) => {
   const opts: FullPageLayout = {
@@ -55,7 +61,7 @@ export const TagPage: QuartzEmitterPlugin<Partial<TagPageOptions>> = (userOpts) 
 
       for (const [_tree, file] of content) {
         const sourcePath = file.data.filePath!
-        const tags = (file.data.frontmatter?.tags ?? []).flatMap(getAllSegmentPrefixes)
+        const tags = getTags(file.data).flatMap(getAllSegmentPrefixes)
         // if the file has at least one tag, it is used in the tag index page
         if (tags.length > 0) {
           tags.push("index")
@@ -76,9 +82,7 @@ export const TagPage: QuartzEmitterPlugin<Partial<TagPageOptions>> = (userOpts) 
       const allFiles = content.map((c) => c[1].data)
       const cfg = ctx.cfg.configuration
 
-      const tags: Set<string> = new Set(
-        allFiles.flatMap((data) => data.frontmatter?.tags ?? []).flatMap(getAllSegmentPrefixes),
-      )
+      const tags: Set<string> = new Set(allFiles.flatMap(getTags).flatMap(getAllSegmentPrefixes))
 
       // add base tag
       tags.add("index")

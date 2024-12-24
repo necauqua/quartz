@@ -16,7 +16,7 @@ This plugin accepts the following configuration options:
 - `wikilinks`:If `true` (default), turns [[wikilinks]] into regular links.
 - `callouts`: If `true` (default), adds support for [[callouts|callout]] blocks for emphasizing content.
 - `mermaid`: If `true` (default), enables [[Mermaid diagrams|Mermaid diagram]] rendering within Markdown files.
-- `parseTags`: If `true` (default), parses and links tags within the content.
+- `parseTags`: If `true` (default), parses and links tags within the content. This marks the page as tagged with those tags, you can set `parseTags` to `"link-only"` to only turn content tags into links.
 - `parseArrows`: If `true` (default), transforms arrow symbols into their HTML character equivalents.
 - `parseBlockReferences`: If `true` (default), handles block references, linking to specific content blocks.
 - `enableInHtmlEmbed`: If `true`, allows embedding of content directly within HTML. Defaults to `false`.
