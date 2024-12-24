@@ -13,6 +13,7 @@ import path from "path"
 import { visit } from "unist-util-visit"
 import isAbsoluteUrl from "is-absolute-url"
 import { Root } from "hast"
+import { wikilinkRegex } from "./ofm"
 
 interface Options {
   /** How to resolve Markdown paths */
@@ -22,6 +23,7 @@ interface Options {
   openLinksInNewTab: boolean
   lazyLoad: boolean
   externalLinkIcon: boolean
+  indexFrontmatterWikilinks: boolean
 }
 
 const defaultOptions: Options = {
@@ -30,6 +32,20 @@ const defaultOptions: Options = {
   openLinksInNewTab: false,
   lazyLoad: false,
   externalLinkIcon: true,
+  indexFrontmatterWikilinks: false,
+}
+
+function getFullInternalLink(dest: RelativeURL, fileSlug: SimpleSlug): FullSlug {
+  // url.resolve is considered legacy
+  // WHATWG equivalent https://nodejs.dev/en/api/v18/url/#urlresolvefrom-to
+  const url = new URL(dest, "https://base.com/" + stripSlashes(fileSlug, true))
+  const canonicalDest = url.pathname
+  let [destCanonical, _destAnchor] = splitAnchor(canonicalDest)
+  if (destCanonical.endsWith("/")) {
+    destCanonical += "index"
+  }
+  // need to decodeURIComponent here as WHATWG URL percent-encodes everything
+  return decodeURIComponent(stripSlashes(destCanonical, true)) as FullSlug
 }
 
 export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) => {
@@ -107,17 +123,7 @@ export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) 
                     transformOptions,
                   )
 
-                  // url.resolve is considered legacy
-                  // WHATWG equivalent https://nodejs.dev/en/api/v18/url/#urlresolvefrom-to
-                  const url = new URL(dest, "https://base.com/" + stripSlashes(curSlug, true))
-                  const canonicalDest = url.pathname
-                  let [destCanonical, _destAnchor] = splitAnchor(canonicalDest)
-                  if (destCanonical.endsWith("/")) {
-                    destCanonical += "index"
-                  }
-
-                  // need to decodeURIComponent here as WHATWG URL percent-encodes everything
-                  const full = decodeURIComponent(stripSlashes(destCanonical, true)) as FullSlug
+                  const full = getFullInternalLink(dest, curSlug)
                   const simple = simplifySlug(full)
                   outgoing.add(simple)
                   node.properties["data-slug"] = full
@@ -156,6 +162,31 @@ export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) 
                 }
               }
             })
+
+            if (opts.indexFrontmatterWikilinks) {
+              const strings = Object.values(file.data.frontmatter ?? {})
+                .flatMap((vs) => (Array.isArray(vs) ? vs : [vs]))
+                .filter((v) => typeof v === "string")
+
+              for (const string of strings) {
+                // the regex is /g so we have to do this to get the captures
+                // exec doesn't work because it's stateful and so returns null every other time (very bad)
+                // we do all of that to reuse the wikilinkRegex from ofm
+                const [captures] = [...string.matchAll(wikilinkRegex)]
+                if (!captures || captures[0] != string || string.startsWith("!")) {
+                  // not matched, or didn't match the whole string, or is the embed syntax for some reason,
+                  // which doesn't make sense to support in frontmatter
+                  continue
+                }
+                const [_, rawFp, rawHeader] = captures
+                const fp = rawFp?.trim() ?? ""
+                const anchor = rawHeader?.trim() ?? ""
+                const dest = transformLink(file.data.slug!, fp + anchor, transformOptions)
+                const full = getFullInternalLink(dest, curSlug)
+                const simple = simplifySlug(full)
+                outgoing.add(simple)
+              }
+            }
 
             file.data.links = [...outgoing]
           }
