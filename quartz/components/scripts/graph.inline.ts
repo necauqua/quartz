@@ -99,6 +99,13 @@ async function renderGraph(container: string, fullSlug: FullSlug) {
   const tags: SimpleSlug[] = []
   const validLinks = new Set(data.keys())
 
+  const aliases = new Map<SimpleSlug, SimpleSlug>()
+  for (const [slug, details] of data.entries()) {
+    for (const alias of details.aliases) {
+      aliases.set(simplifySlug(alias), slug)
+    }
+  }
+
   const tweens = new Map<string, TweenNode>()
   for (const [source, details] of data.entries()) {
     const outgoing = details.links ?? []
@@ -106,6 +113,10 @@ async function renderGraph(container: string, fullSlug: FullSlug) {
     for (const dest of outgoing) {
       if (validLinks.has(dest)) {
         links.push({ source: source, target: dest })
+      }
+      const aliased = aliases.get(dest)
+      if (aliased) {
+        links.push({ source: source, target: aliased })
       }
     }
 
