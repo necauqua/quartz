@@ -74,13 +74,27 @@ export const FolderPage: QuartzEmitterPlugin<Partial<FolderPageOptions>> = (user
       const allFiles = content.map((c) => c[1].data)
       const cfg = ctx.cfg.configuration
 
+      const folderNames: Record<SimpleSlug, string> = {}
+
       const folders: Set<SimpleSlug> = new Set(
         allFiles.flatMap((data) => {
-          return data.slug
-            ? _getFolders(data.slug).filter(
-                (folderName) => folderName !== "." && folderName !== "tags",
-              )
-            : []
+          if (!data.slug || !data.relativePath) {
+            return []
+          }
+          let folderSlug = path.dirname(data.slug) as SimpleSlug
+          let folderFs = path.dirname(data.relativePath) as SimpleSlug
+          folderNames[folderSlug] = folderFs
+
+          const folders = [folderSlug]
+          while (folderSlug !== ".") {
+            folderSlug = path.dirname(folderSlug) as SimpleSlug
+            folders.push(folderSlug)
+
+            folderFs = path.dirname(folderFs) as SimpleSlug
+            folderNames[folderSlug] = folderFs
+          }
+
+          return folders.filter((f) => f !== "." && f !== "tags")
         }),
       )
 
@@ -89,8 +103,9 @@ export const FolderPage: QuartzEmitterPlugin<Partial<FolderPageOptions>> = (user
           folder,
           defaultProcessedContent({
             slug: joinSegments(folder, "index") as FullSlug,
+            relativePath: joinSegments(folderNames[folder], "index.html") as FilePath, // this is used by breadcrumbs
             frontmatter: {
-              title: `${i18n(cfg.locale).pages.folderContent.folder}: ${folder}`,
+              title: `${i18n(cfg.locale).pages.folderContent.folder}: ${folderNames[folder]}`,
               tags: [],
             },
           }),
@@ -131,15 +146,4 @@ export const FolderPage: QuartzEmitterPlugin<Partial<FolderPageOptions>> = (user
       return fps
     },
   }
-}
-
-function _getFolders(slug: FullSlug): SimpleSlug[] {
-  var folderName = path.dirname(slug ?? "") as SimpleSlug
-  const parentFolderNames = [folderName]
-
-  while (folderName !== ".") {
-    folderName = path.dirname(folderName ?? "") as SimpleSlug
-    parentFolderNames.push(folderName)
-  }
-  return parentFolderNames
 }

@@ -23,6 +23,11 @@ const defaultOptions: FolderContentOptions = {
   showSubfolders: true,
 }
 
+type Subfolder = {
+  name: string
+  contents: QuartzPluginData[]
+}
+
 export default ((opts?: Partial<FolderContentOptions>) => {
   const options: FolderContentOptions = { ...defaultOptions, ...opts }
 
@@ -31,51 +36,56 @@ export default ((opts?: Partial<FolderContentOptions>) => {
     const folderSlug = stripSlashes(simplifySlug(fileData.slug!))
     const folderParts = folderSlug.split(path.posix.sep)
 
-    const allPagesInFolder: QuartzPluginData[] = []
-    const allPagesInSubfolders: Map<FullSlug, QuartzPluginData[]> = new Map()
+    const shownPages: QuartzPluginData[] = []
+    const subfolders: Map<FullSlug, Subfolder> = new Map()
 
-    allFiles.forEach((file) => {
+    for (const file of allFiles) {
       const fileSlug = stripSlashes(simplifySlug(file.slug!))
-      const prefixed = fileSlug.startsWith(folderSlug) && fileSlug !== folderSlug
-      const fileParts = fileSlug.split(path.posix.sep)
-      const isDirectChild = fileParts.length === folderParts.length + 1
-
-      if (!prefixed) {
-        return
+      // check only files in our folder or nested folders
+      if (!fileSlug.startsWith(folderSlug) || fileSlug === folderSlug) {
+        continue
       }
 
-      if (isDirectChild) {
-        allPagesInFolder.push(file)
-      } else if (options.showSubfolders) {
+      const fileParts = fileSlug.split(path.posix.sep)
+
+      // If the file is directly in the folder we just show it
+      if (fileParts.length === folderParts.length + 1) {
+        shownPages.push(file)
+        continue
+      }
+
+      if (options.showSubfolders) {
         const subfolderSlug = joinSegments(
           ...fileParts.slice(0, folderParts.length + 1),
         ) as FullSlug
-        const pagesInFolder = allPagesInSubfolders.get(subfolderSlug) || []
-        allPagesInSubfolders.set(subfolderSlug, [...pagesInFolder, file])
-      }
-    })
 
-    allPagesInSubfolders.forEach((files, subfolderSlug) => {
-      const hasIndex = allPagesInFolder.some(
-        (file) => subfolderSlug === stripSlashes(simplifySlug(file.slug!)),
-      )
+        let subfolder = subfolders.get(subfolderSlug)
+        if (!subfolder) {
+          const subfolderName = file.relativePath!.split(path.posix.sep).at(folderParts.length)!
+          subfolders.set(subfolderSlug, (subfolder = { name: subfolderName, contents: [] }))
+        }
+        subfolder.contents.push(file)
+      }
+    }
+
+    for (const [slug, subfolder] of subfolders.entries()) {
+      const hasIndex = shownPages.some((file) => slug === stripSlashes(simplifySlug(file.slug!)))
       if (!hasIndex) {
-        const subfolderDates = files.sort(byDateAndAlphabetical(cfg))[0].dates
-        const subfolderTitle = subfolderSlug.split(path.posix.sep).at(-1)!
-        allPagesInFolder.push({
-          slug: subfolderSlug,
+        const subfolderDates = subfolder.contents.sort(byDateAndAlphabetical(cfg))[0].dates
+        shownPages.push({
+          slug: slug,
           dates: subfolderDates,
-          frontmatter: { title: subfolderTitle, tags: ["folder"] },
+          frontmatter: { title: subfolder.name, tags: ["folder"] },
         })
       }
-    })
+    }
 
     const cssClasses: string[] = fileData.frontmatter?.cssclasses ?? []
     const classes = cssClasses.join(" ")
     const listProps = {
       ...props,
       sort: options.sort,
-      allFiles: allPagesInFolder,
+      allFiles: shownPages,
     }
 
     const content =
@@ -90,7 +100,7 @@ export default ((opts?: Partial<FolderContentOptions>) => {
           {options.showFolderCount && (
             <p>
               {i18n(cfg.locale).pages.folderContent.itemsUnderFolder({
-                count: allPagesInFolder.length,
+                count: shownPages.length,
               })}
             </p>
           )}

@@ -40,11 +40,8 @@ const defaultOptions: BreadcrumbOptions = {
   showCurrentPage: true,
 }
 
-function formatCrumb(displayName: string, baseSlug: FullSlug, currentSlug: SimpleSlug): CrumbData {
-  return {
-    displayName: displayName.replaceAll("-", " "),
-    path: resolveRelative(baseSlug, currentSlug),
-  }
+function newCrumb(displayName: string, baseSlug: FullSlug, currentSlug: SimpleSlug): CrumbData {
+  return { displayName, path: resolveRelative(baseSlug, currentSlug) }
 }
 
 export default ((opts?: Partial<BreadcrumbOptions>) => {
@@ -65,7 +62,7 @@ export default ((opts?: Partial<BreadcrumbOptions>) => {
     }
 
     // Format entry for root element
-    const firstEntry = formatCrumb(options.rootName, fileData.slug!, "/" as SimpleSlug)
+    const firstEntry = newCrumb(options.rootName, fileData.slug!, "/" as SimpleSlug)
     const crumbs: CrumbData[] = [firstEntry]
 
     if (!folderIndex && options.resolveFrontmatterTitle) {
@@ -81,6 +78,7 @@ export default ((opts?: Partial<BreadcrumbOptions>) => {
 
     // Split slug into hierarchy/parts
     const slugParts = fileData.slug?.split("/")
+    const pathParts = fileData.relativePath?.split("/")
     if (slugParts) {
       // is tag breadcrumb?
       const isTagPath = slugParts[0] === "tags"
@@ -89,7 +87,7 @@ export default ((opts?: Partial<BreadcrumbOptions>) => {
       let currentPath = ""
 
       for (let i = 0; i < slugParts.length - 1; i++) {
-        let curPathSegment = slugParts[i]
+        let curPathSegment = pathParts?.[i] ?? slugParts[i]
 
         // Try to resolve frontmatter folder title
         const currentFile = folderIndex?.get(slugParts.slice(0, i + 1).join("/"))
@@ -105,7 +103,7 @@ export default ((opts?: Partial<BreadcrumbOptions>) => {
         const includeTrailingSlash = !isTagPath || i < 1
 
         // Format and add current crumb
-        const crumb = formatCrumb(
+        const crumb = newCrumb(
           curPathSegment,
           fileData.slug!,
           (currentPath + (includeTrailingSlash ? "/" : "")) as SimpleSlug,
