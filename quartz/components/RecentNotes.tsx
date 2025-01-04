@@ -1,5 +1,5 @@
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
-import { FullSlug, SimpleSlug, resolveRelative } from "../util/path"
+import { FullSlug, SimpleSlug, resolveRelative, slugTag } from "../util/path"
 import { QuartzPluginData } from "../plugins/vfile"
 import { byDateAndAlphabetical } from "./PageList"
 import style from "./styles/recentNotes.scss"
@@ -64,7 +64,10 @@ export default ((userOpts?: Partial<Options>) => {
                         <li>
                           <a
                             class="internal tag-link"
-                            href={resolveRelative(fileData.slug!, `tags/${tag}` as FullSlug)}
+                            href={resolveRelative(
+                              fileData.slug!,
+                              `tags/${slugTag(tag)}` as FullSlug,
+                            )}
                           >
                             {tag}
                           </a>

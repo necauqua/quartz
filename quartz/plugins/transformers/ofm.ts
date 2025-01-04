@@ -337,7 +337,6 @@ export const ObsidianFlavoredMarkdown: QuartzTransformerPlugin<Partial<Options>>
                   return false
                 }
 
-                tag = slugTag(tag)
                 if (file.data.frontmatter) {
                   const noteTags = file.data.frontmatter.tags ?? []
                   file.data.frontmatter.tags = [...new Set([...noteTags, tag])]
@@ -345,7 +344,7 @@ export const ObsidianFlavoredMarkdown: QuartzTransformerPlugin<Partial<Options>>
 
                 return {
                   type: "link",
-                  url: base + `/tags/${tag}`,
+                  url: `${base}/tags/${slugTag(tag)}`,
                   data: {
                     hProperties: {
                       className: ["tag-link"],
