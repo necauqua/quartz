@@ -5,7 +5,7 @@ declare module "*.scss" {
 
 // dom custom event
 interface CustomEventMap {
-  nav: CustomEvent<{ url: FullSlug }>
+  nav: CustomEvent<{ url: FullSlug; significantLoad?: true }>
   themechange: CustomEvent<{ theme: "light" | "dark" }>
 }
 

@@ -35,8 +35,8 @@ const getOpts = ({ target }: Event): { url: URL; scroll?: boolean } | undefined 
   return { url: new URL(href), scroll: "routerNoscroll" in a.dataset ? false : undefined }
 }
 
-function notifyNav(url: FullSlug) {
-  const event: CustomEventMap["nav"] = new CustomEvent("nav", { detail: { url } })
+function notifyNav(url: FullSlug, significantLoad?: true) {
+  const event: CustomEventMap["nav"] = new CustomEvent("nav", { detail: { url, significantLoad } })
   document.dispatchEvent(event)
 }
 
@@ -177,7 +177,7 @@ function createRouter() {
 }
 
 createRouter()
-notifyNav(getFullSlug(window))
+notifyNav(getFullSlug(window), true)
 
 if (!customElements.get("route-announcer")) {
   const attrs = {

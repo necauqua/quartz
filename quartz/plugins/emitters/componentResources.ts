@@ -127,6 +127,7 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
       goatcounterScript.async = true
       goatcounterScript.setAttribute("data-goatcounter",
         "https://${cfg.analytics.websiteId}.${cfg.analytics.host ?? "goatcounter.com"}/count")
+      document.addEventListener("nav", (e) => !e.detail.significantLoad && window.goatcounter?.count())
       document.head.appendChild(goatcounterScript)
     `)
   } else if (cfg.analytics?.provider === "posthog") {
@@ -169,7 +170,7 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
     componentResources.afterDOMLoaded.push(`
       window.spaNavigate = (url, _) => window.location.assign(url)
       window.addCleanup = () => {}
-      const event = new CustomEvent("nav", { detail: { url: document.body.dataset.slug } })
+      const event = new CustomEvent("nav", { detail: { url: document.body.dataset.slug, significantLoad: true } })
       document.dispatchEvent(event)
     `)
   }
