@@ -14,6 +14,7 @@ import { Features, transform } from "lightningcss"
 import { transform as transpile } from "esbuild"
 import { write } from "./helpers"
 import DepGraph from "../../depgraph"
+import path from "path"
 
 type ComponentResources = {
   css: string[]
@@ -183,8 +184,13 @@ export const ComponentResources: QuartzEmitterPlugin = () => {
     getQuartzComponents() {
       return []
     },
-    async getDependencyGraph(_ctx, _content, _resources) {
-      return new DepGraph<FilePath>()
+    async getDependencyGraph(ctx, _content, _resources) {
+      const graph = new DepGraph<FilePath>()
+      graph.addEdge(
+        path.join(ctx.argv.output, "index.css") as FilePath,
+        path.join(process.cwd(), "styles.scss") as FilePath,
+      )
+      return graph
     },
     async emit(ctx, _content, _resources): Promise<FilePath[]> {
       const promises: Promise<FilePath>[] = []
@@ -245,6 +251,7 @@ export const ComponentResources: QuartzEmitterPlugin = () => {
         googleFontsStyleSheet,
         ...componentResources.css,
         styles,
+        await import("$styles").then((s) => s.default ?? s).catch(() => ""),
       )
       const [prescript, postscript] = await Promise.all([
         joinScripts(componentResources.beforeDOMLoaded),

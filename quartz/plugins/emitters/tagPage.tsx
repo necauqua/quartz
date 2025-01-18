@@ -12,7 +12,7 @@ import {
   joinSegments,
   pathToRoot,
 } from "../../util/path"
-import { defaultListPageLayout, sharedPageComponents } from "../../../quartz.layout"
+import { defaultListPageLayout, sharedPageComponents } from "$layout"
 import { TagContent } from "../../components"
 import { write } from "./helpers"
 import { i18n } from "../../i18n"

@@ -7,7 +7,7 @@ import { Root as HTMLRoot } from "hast"
 import { MarkdownContent, ProcessedContent } from "../plugins/vfile"
 import { PerfTimer } from "../util/perf"
 import { read } from "to-vfile"
-import { FilePath, FullSlug, QUARTZ, slugifyFilePath } from "../util/path"
+import { FilePath, FullSlug, slugifyFilePath } from "../util/path"
 import path from "path"
 import workerpool, { Promise as WorkerPromise } from "workerpool"
 import { QuartzLogger } from "../util/log"
@@ -49,20 +49,28 @@ function* chunks<T>(arr: T[], n: number) {
   }
 }
 
-async function transpileWorkerScript() {
-  // transpile worker script
-  const cacheFile = "./.quartz-cache/transpiled-worker.mjs"
-  const fp = "./quartz/worker.ts"
-  return esbuild.build({
+async function transpileWorkerScript(ctx: BuildCtx): Promise<string> {
+  // import.meta.dirname is the cache folder, because we're in transpiled-build.mjs atm technically
+  const cacheFile = path.join(import.meta.dirname, "transpiled-worker.mjs")
+  const fp = path.join(ctx.quartzRoot, "worker.ts")
+  await esbuild.build({
     entryPoints: [fp],
-    outfile: path.join(QUARTZ, cacheFile),
+    outfile: cacheFile,
     bundle: true,
     keepNames: true,
+    minifyWhitespace: true,
+    minifySyntax: true,
     platform: "node",
     format: "esm",
     packages: "external",
     sourcemap: true,
     sourcesContent: false,
+    alias: {
+      $config: path.join(process.cwd(), "quartz.config.ts"),
+      $layout: path.join(process.cwd(), "quartz.layout.ts"),
+      $styles: path.join(process.cwd(), "styles.scss"),
+      quartz: path.resolve(ctx.quartzRoot, ".."),
+    },
     plugins: [
       {
         name: "css-and-scripts-as-text",
@@ -79,6 +87,7 @@ async function transpileWorkerScript() {
       },
     ],
   })
+  return cacheFile
 }
 
 export function createFileParser(ctx: BuildCtx, fps: FilePath[]) {
@@ -164,11 +173,12 @@ export async function parseMarkdown(ctx: BuildCtx, fps: FilePath[]): Promise<Pro
       throw error
     }
   } else {
-    await transpileWorkerScript()
-    const pool = workerpool.pool("./quartz/bootstrap-worker.mjs", {
+    const transpiledWorker = await transpileWorkerScript(ctx)
+    const pool = workerpool.pool(path.join(ctx.quartzRoot, "bootstrap-worker.mjs"), {
       minWorkers: "max",
       maxWorkers: concurrency,
       workerType: "thread",
+      workerThreadOpts: { argv: [transpiledWorker] },
     })
     const errorHandler = (err: any) => {
       console.error(`${err}`.replace(/^error:\s*/i, ""))
@@ -177,7 +187,7 @@ export async function parseMarkdown(ctx: BuildCtx, fps: FilePath[]): Promise<Pro
 
     const mdPromises: WorkerPromise<[MarkdownContent[], FullSlug[]]>[] = []
     for (const chunk of chunks(fps, CHUNK_SIZE)) {
-      mdPromises.push(pool.exec("parseMarkdown", [ctx.buildId, argv, chunk]))
+      mdPromises.push(pool.exec("parseMarkdown", [ctx.buildId, ctx.quartzRoot, argv, chunk]))
     }
     const mdResults: [MarkdownContent[], FullSlug[]][] =
       await WorkerPromise.all(mdPromises).catch(errorHandler)
@@ -187,7 +197,9 @@ export async function parseMarkdown(ctx: BuildCtx, fps: FilePath[]): Promise<Pro
       ctx.allSlugs.push(...extraSlugs)
     }
     for (const [mdChunk, _] of mdResults) {
-      childPromises.push(pool.exec("processHtml", [ctx.buildId, argv, mdChunk, ctx.allSlugs]))
+      childPromises.push(
+        pool.exec("processHtml", [ctx.buildId, ctx.quartzRoot, argv, mdChunk, ctx.allSlugs]),
+      )
     }
     const results: ProcessedContent[][] = await WorkerPromise.all(childPromises).catch(errorHandler)
 

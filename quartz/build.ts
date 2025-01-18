@@ -8,7 +8,7 @@ import chalk from "chalk"
 import { parseMarkdown } from "./processors/parse"
 import { filterContent } from "./processors/filter"
 import { emitContent } from "./processors/emit"
-import cfg from "../quartz.config"
+import cfg from "$config"
 import { FilePath, FullSlug, joinSegments, slugifyFilePath } from "./util/path"
 import chokidar from "chokidar"
 import { ProcessedContent } from "./plugins/vfile"
@@ -42,12 +42,13 @@ function newBuildId() {
   return Math.random().toString(36).substring(2, 8)
 }
 
-async function buildQuartz(argv: Argv, mut: Mutex, clientRefresh: () => void) {
+async function buildQuartz(quartzRoot: string, argv: Argv, mut: Mutex, clientRefresh: () => void) {
   const ctx: BuildCtx = {
     buildId: newBuildId(),
     argv,
     cfg,
     allSlugs: [],
+    quartzRoot,
   }
 
   const perf = new PerfTimer()
@@ -413,9 +414,9 @@ async function rebuildFromEntrypoint(
   release()
 }
 
-export default async (argv: Argv, mut: Mutex, clientRefresh: () => void) => {
+export default async (quartzRoot: string, argv: Argv, mut: Mutex, clientRefresh: () => void) => {
   try {
-    return await buildQuartz(argv, mut, clientRefresh)
+    return await buildQuartz(quartzRoot, argv, mut, clientRefresh)
   } catch (err) {
     trace("\nExiting Quartz due to a fatal error", err as Error)
   }

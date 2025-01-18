@@ -31,7 +31,9 @@ import {
   fp,
   cacheFile,
   cwd,
+  quartzRoot,
 } from "./constants.js"
+import { pathToFileURL } from "url"
 
 /**
  * Handles `npx quartz create`
@@ -232,6 +234,12 @@ export async function handleBuild(argv) {
     metafile: true,
     sourcemap: true,
     sourcesContent: false,
+    alias: {
+      $config: path.join(cwd, "quartz.config.ts"),
+      $layout: path.join(cwd, "quartz.layout.ts"),
+      $styles: path.join(cwd, "styles.scss"),
+      quartz: path.resolve(quartzRoot, ".."),
+    },
     plugins: [
       sassPlugin({
         type: "css-text",
@@ -303,8 +311,9 @@ export async function handleBuild(argv) {
     release()
 
     if (argv.bundleInfo) {
-      const outputFileName = "quartz/.quartz-cache/transpiled-build.mjs"
-      const meta = result.metafile.outputs[outputFileName]
+      // metafile.outputs always uses /
+      const output = path.relative(cwd, cacheFile).replaceAll("\\", "/")
+      const meta = result.metafile.outputs[output]
       console.log(
         `Successfully transpiled ${Object.keys(meta.inputs).length} files (${prettyBytes(
           meta.bytes,
@@ -313,12 +322,14 @@ export async function handleBuild(argv) {
       console.log(await esbuild.analyzeMetafile(result.metafile, { color: true }))
     }
 
+    // absolute path on windows has to be a file:// url
+    const url = pathToFileURL(cacheFile)
     // bypass module cache
     // https://github.com/nodejs/modules/issues/307
-    const { default: buildQuartz } = await import(`../../${cacheFile}?update=${randomUUID()}`)
-    // ^ this import is relative, so base "cacheFile" path can't be used
+    url.searchParams.set("update", randomUUID())
+    const { default: buildQuartz } = await import(url)
 
-    cleanupBuild = await buildQuartz(argv, buildMutex, clientRefresh)
+    cleanupBuild = await buildQuartz(quartzRoot, argv, buildMutex, clientRefresh)
     clientRefresh()
   }
 

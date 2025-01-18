@@ -1,6 +1,5 @@
 import sourceMapSupport from "source-map-support"
 sourceMapSupport.install(options)
-import cfg from "../quartz.config"
 import { Argv, BuildCtx } from "./util/ctx"
 import { FilePath, FullSlug } from "./util/path"
 import {
@@ -12,9 +11,12 @@ import {
 import { options } from "./util/sourcemap"
 import { MarkdownContent, ProcessedContent } from "./plugins/vfile"
 
+import cfg from "$config"
+
 // only called from worker thread
 export async function parseMarkdown(
   buildId: string,
+  quartzRoot: string,
   argv: Argv,
   fps: FilePath[],
 ): Promise<[MarkdownContent[], FullSlug[]]> {
@@ -27,6 +29,7 @@ export async function parseMarkdown(
     cfg,
     argv,
     allSlugs,
+    quartzRoot,
   }
   return [await createFileParser(ctx, fps)(createMdProcessor(ctx)), allSlugs]
 }
@@ -34,6 +37,7 @@ export async function parseMarkdown(
 // only called from worker thread
 export function processHtml(
   buildId: string,
+  quartzRoot: string,
   argv: Argv,
   mds: MarkdownContent[],
   allSlugs: FullSlug[],
@@ -43,6 +47,7 @@ export function processHtml(
     cfg,
     argv,
     allSlugs,
+    quartzRoot,
   }
   return createMarkdownParser(ctx, mds)(createHtmlProcessor(ctx))
 }

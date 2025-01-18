@@ -34,6 +34,7 @@
   "bin": {
     "quartz": "./quartz/bootstrap-cli.mjs"
   },
+  "types": "./ambient.d.ts",
   "dependencies": {
     "@clack/prompts": "^0.9.1",
     "@floating-ui/dom": "^1.6.13",

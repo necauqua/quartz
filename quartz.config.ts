@@ -1,12 +1,11 @@
-import { QuartzConfig } from "./quartz/cfg"
-import * as Plugin from "./quartz/plugins"
+import { QuartzConfig, Plugin } from "quartz"
 
 /**
  * Quartz 4.0 Configuration
  *
  * See https://quartz.jzhao.xyz/configuration for more information.
  */
-const config: QuartzConfig = {
+export default {
   configuration: {
     pageTitle: "🪴 Quartz 4.0",
     pageTitleSuffix: "",
@@ -90,6 +89,4 @@ const config: QuartzConfig = {
       Plugin.NotFoundPage(),
     ],
   },
-}
-
-export default config
+} satisfies QuartzConfig
